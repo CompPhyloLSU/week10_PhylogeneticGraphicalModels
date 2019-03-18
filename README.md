@@ -17,4 +17,4 @@
 
 ## Homework
 
-Forthcoming...
+See slides for details.

@@ -30,11 +30,11 @@ mymodel
 monitor.append(mnModel(filename="output/primates_cytb_HKY.log", printgen=10))
 monitor.append(mnFile(filename="output/primates_cytb_HKY.trees", printgen=10, psi))
 monitor.append(mnScreen(printgen=1000, TreeLengths))
-myMCMC = mcmc(mymodel, monitor, move, nruns=2, combine="mixed")
-myMCMC.run(generations=20000, tuningInterval=200)
+myMCMC = mcmc(mymodel, monitor, move, nruns=1, combine="mixed")
+myMCMC.run(generations=10000, tuningInterval=200)
 
 ## Exercise1
-treetrace = readTreeTrace("output/primates_cytb_HKY.trees", treetype="non-clock", outgroup=out_group)
+treetrace = readTreeTrace("output/primates_cytb_HKY.trees", treetype="non-clock", outgroup=o_group)
 map_tree = mapTree(treetrace, "output/primates_cytb_HKY_MAP.tree")
 Lemuroidea <- clade("Cheirogaleus_major", 
                     "Daubentonia_madagascariensis", 
@@ -55,7 +55,7 @@ treetrace.cladeProbability( Platyrrhini )
 
 Catarrhini <- clade("Chlorocebus_aethiops",
 		"Colobus_guereza",
-		"Hylobates_Iar",
+		"Hylobates_lar",
 		"Macaca_mulatta",
 		"Pan_paniscus")
 

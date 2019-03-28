@@ -5,11 +5,19 @@ n_branches <- 2 * n_taxa - 3
 tax <- data.taxa()
 move = VectorMoves()
 monitor = VectorMonitors()
+alpha ~ dnUniform(0, 1E8)
+alpha.setValue(1)
+gamma_rates := fnDiscretizeGamma(alpha, alpha, 4)
+move.append(mvScale(alpha, weight=2))
+er_prior <- v(1,1,1,1,1,1)
+er ~ dnDirichlet(er_prior)
+move.append(mvBetaSimplex(er, weight=3))
+move.append(mvDirichletSimplex(er, weight=1))
 pi_prior <- v(1,1,1,1)
 pi ~ dnDirichlet(pi_prior)
 move.append( mvBetaSimplex(pi, weight=2))
 move.append( mvDirichletSimplex(pi, weight=1))
-Q := fnF81(pi)
+Q := fnGTR(er, pi)
 Q
 o_group = clade("Galeopterus_variegatus")
 topo ~ dnUniformTopology(tax, outgroup=o_group)
@@ -21,19 +29,19 @@ for (j in 1:n_branches){
 }
 TreeLengths := sum(br_lengths)
 psi := treeAssembly(topo, br_lengths)
-sequence ~ dnPhyloCTMC(tree=psi, Q=Q, type="DNA")
+sequence ~ dnPhyloCTMC(tree=psi, Q=Q, siteRates=gamma_rates, type="DNA")
 sequence.clamp(data)
 mymodel = model(Q)
 mymodel
-monitor.append(mnModel(filename="output/primates_cytb_F81.log", printgen=10))
-monitor.append(mnFile(filename="output/primates_cytb_F81.trees", printgen=10, psi))
+monitor.append(mnModel(filename="output/primates_cytb_GTRG.log", printgen=10))
+monitor.append(mnFile(filename="output/primates_cytb_GTRG.trees", printgen=10, psi))
 monitor.append(mnScreen(printgen=1000, TreeLengths))
 myMCMC = mcmc(mymodel, monitor, move, nruns=1, combine="mixed")
 myMCMC.run(generations=10000, tuningInterval=200)
 
 ## Exercise1
-treetrace = readTreeTrace("output/primates_cytb_F81.trees", treetype="non-clock", outgroup=o_group)
-map_tree = mapTree(treetrace, "output/primates_cytb_F81_MAP.tree")
+treetrace = readTreeTrace("output/primates_cytb_GTRG.trees", treetype="non-clock", outgroup=o_group)
+map_tree = mapTree(treetrace, "output/primates_cytb_GTRG_MAP.tree")
 Lemuroidea <- clade("Cheirogaleus_major", 
                     "Daubentonia_madagascariensis", 
                     "Lemur_catta", 

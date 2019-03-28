@@ -19,6 +19,21 @@ taxa <- data.taxa()
 moves    = VectorMoves()
 monitors = VectorMonitors()
 
+pi_prior <- v(1,1,1,1)
+pi ~ dnDirichlet(pi_prior)
+moves.append(mvBetaSimplex(pi, weight=2))
+moves.append(mvDirichletSimplex(pi, weight=1))
+kappa ~ dnLognormal(0.0, 1.0)
+moves.append(mvScale(kappa))
+
+######################
+# Substitution Model #
+######################
+
+# create a constant variable for the rate matrix
+Q <- fnHKY(kappa,pi)
+
+
 ##############
 # Tree model #
 ##############
@@ -26,28 +41,20 @@ monitors = VectorMonitors()
 out_group = clade("Galeopterus_variegatus")
 # Prior distribution on the tree topology    
 topology ~ dnUniformTopology(taxa, outgroup=out_group)
-pi_prior <- v(1,1,1,1)
-pi ~ dnDirichlet(pi_prior)
-moves.append( mvBetaSimplex(pi, weight=2) )
-moves.append( mvDirichletSimplex(pi, weight=1) )
+moves.append( mvNNI(topology, weight=num_taxa/2.0) )
+moves.append( mvSPR(topology, weight=num_taxa/10.0) )
 
 # Branch length prior
-kappa ~ dnLognormal(0,1)
 for (i in 1:num_branches) {
     bl[i] ~ dnExponential(10.0)
-    moves.append( mvScale(kappa[i]) )
+    moves.append( mvScale(bl[i]) )
 }
 
 TL := sum(bl)
     
 psi := treeAssembly(topology, bl)
 
-####################
-#Substitution Model#
-####################
 
-#Create a constant variable for the rate matrix
-Q <- fnHKY(kappa, pi)
 
 ###################
 # PhyloCTMC Model #
@@ -67,13 +74,13 @@ seq.clamp(data)
 mymodel = model(psi)
 
 # add monitors
-monitors.append( mnScreen(TL, printgen=1000) )
+monitors.append( mnScreen(TL, printgen=100) )
 monitors.append( mnFile(psi, filename="output/primates_cytb_HKY.trees", printgen=10) )
-monitors.append( mnModel(filename="output/primates_cytb_HKY.log", printgen=10) )
+monitors.append( mnModel(filename="output/primates_cytb_HKY2.log", printgen=10) )
 
 # run the analysis
-mymcmc = mcmc(mymodel, moves, monitors, nruns=2, combine="mixed")
-mymcmc.run(generations=20000,tuningInterval=200)
+mymcmc = mcmc(mymodel, moves, monitors, nruns=1, combine="mixed")
+mymcmc.run(generations=10000,tuningInterval=200)
 
 
 ###################
@@ -82,9 +89,9 @@ mymcmc.run(generations=20000,tuningInterval=200)
 
 # Now, we will analyze the tree output.
 # Let us start by reading in the tree trace
-treetrace = readTreeTrace("output/primates_cytb_HKY.trees", treetype="non-clock", outgroup=out_group)
+treetrace = readTreeTrace("output/primates_cytb_HKY2.trees", treetype="non-clock", outgroup=out_group)
 # and then get the MAP tree
-map_tree = mapTree(treetrace,"output/primates_cytb_HKY_MAP.tree")
+map_tree = mapTree(treetrace,"output/primates_cytb_HKY2_MAP.tree")
 
 
 # you may want to quit RevBayes now

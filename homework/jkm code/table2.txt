@@ -1,0 +1,8 @@
+Posterior probabilities under different analyses
+Model	Lemuroidea	Lorisoidea	Platyrrhini	Catarrhini
+JC	 	 	0.575 	   1             1          1
+HKY85	 	 0	 	 0               0          0
+F81	 	 	 0       0               0          0 	 
+GTR	 	 	 0	      0              0          0
+GTR+Gamma	 0        0              0          0	 	 	 
+GTR+Gamma+I	 0        0              0           0	 	 	 

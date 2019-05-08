@@ -1,0 +1,94 @@
+data<- readDiscreteCharacterData("data/primates_and_galeopterus_cytb.nex")
+
+
+num_taxa<-data.ntaxa()
+num_branches <- 2 * num_taxa - 3
+taxa<-data.taxa()
+
+moves    = VectorMoves()
+monitors = VectorMonitors()
+
+er_prior <- v(1,1,1,1,1,1)
+er ~ dnDirichlet(er_prior)
+ 
+moves.append( mvBetaSimplex(er, weight=3) )
+moves.append( mvDirichletSimplex(er, weight=1) )
+
+pi_prior <- v(1,1,1,1)
+pi ~ dnDirichlet(pi_prior) 
+moves.append( mvBetaSimplex(pi, weight=2) )
+moves.append( mvDirichletSimplex(pi, weight=1) )
+
+Q := fnGTR(er,pi)
+
+alpha ~ dnUniform(0.0, 1E8) 
+alpha.setValue(1.0)
+
+
+gamma_rates := fnDiscretizeGamma( alpha, alpha, 4, false) 
+
+pinvar ~ dnBeta(1,1)
+
+moves.append( mvSlide(pinvar) )
+
+moves.append( mvScale(alpha, weight=2.0) ) 
+
+for (i in 1:num_branches) {
+   br_lens[i] ~ dnExponential(10.0)
+   moves.append( mvScale(br_lens[i]) )
+}
+
+TL := sum(br_lens)
+
+out_group = clade("Galeopterus_variegatus")
+topology ~ dnUniformTopology(taxa) 
+psi := treeAssembly(topology, br_lens)
+
+seq ~ dnPhyloCTMC(tree=psi, Q=Q, siteRates=gamma_rates, pInv=pinvar, type="DNA")
+seq.clamp(data)
+
+mymodel = model(Q)
+mymodel
+
+monitors.append( mnModel(filename="output/primates_cytb_GAMMAI.log", printgen=10) )
+monitors.append( mnFile(filename="output/primates_cytb_GAMMAI.trees", printgen=10, psi) )
+monitors.append( mnScreen(printgen=1000, TL) )
+
+mymcmc = mcmc(mymodel, monitors, moves, nruns=2, combine="mixed")
+mymcmc.run(generations=10000,tuningInterval=200)
+
+treetrace = readTreeTrace("output/primates_cytb_GAMMAI.trees", treetype="non-clock", outgroup=out_group)
+map_tree = mapTree(treetrace,"output/primates_cytb_GAMMAI_MAP.tree")
+
+Lemuroidea <- clade("Cheirogaleus_major", 
+                    "Daubentonia_madagascariensis", 
+                    "Lemur_catta", 
+                    "Lepilemur_hubbardorum",
+                    "Microcebus_murinus",
+                    "Propithecus_coquereli",
+                    "Varecia_variegata_variegata")
+                    
+treetrace.cladeProbability( Lemuroidea )
+
+Lorisidae <- clade("Loris_tardigradus", 
+                    "Galago_senegalensis", 
+                    "Nycticebus_coucang", 
+                    "Otolemur_crassicaudatus",
+                    "Perodicticus_potto")
+                    
+treetrace.cladeProbability( Lorisidae )
+
+Platyrrhini <- clade("Aotus_trivirgatus", 
+                    "Callicebus_donacophilus", 
+                    "Cebus_albifrons", 
+                    "Saimiri_sciureus")
+                    
+treetrace.cladeProbability( Platyrrhini)
+
+Catarrhini <- clade("Chlorocebus_aethiops", 
+                    "Hylobates_lar", 
+                    "Colobus_guereza", 
+                    "Pan_paniscus",
+                    "Macaca_mulatta")
+                    
+treetrace.cladeProbability( Catarrhini )

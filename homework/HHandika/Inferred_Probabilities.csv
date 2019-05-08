@@ -1,0 +1,9 @@
+﻿Model,Lemuroidea,Lorisoidea,Platyrrhini,Catarrhini
+Jukes-Cantor,0.58,1,1,1
+HKY85,0.96,1,1,1
+F81,1,1,1,1
+GTR,1,1,1,1
+JC + IG,1,1,1,1
+HKY85 + IG,1,1,1,1
+F81 + IG,1,1,1,1
+GTR + IG,1,1,1,1

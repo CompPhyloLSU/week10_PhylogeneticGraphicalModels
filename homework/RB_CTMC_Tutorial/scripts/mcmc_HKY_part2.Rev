@@ -1,0 +1,37 @@
+
+###################
+# PhyloCTMC Model #
+###################
+
+# the sequence evolution model
+seq ~ dnPhyloCTMC(tree=psi, Q=Q, type="DNA")
+
+# attach the data
+seq.clamp(data)
+
+
+############
+# Analysis #
+############
+
+mymodel = model(psi)
+
+# add monitors
+monitors.append( mnScreen(TL, printgen=1000) )
+monitors.append( mnFile(psi, filename="output/primates_cytb_HKY.trees", printgen=10) )
+monitors.append( mnModel(filename="output/primates_cytb_HKY.log", printgen=10) )
+
+# run the analysis
+mymcmc = mcmc(mymodel, moves, monitors, nruns=2, combine="mixed")
+mymcmc.run(generations=10000,tuningInterval=200)
+
+
+###################
+# Post processing #
+###################
+
+# Now, we will analyze the tree output.
+# Let us start by reading in the tree trace
+treetrace = readTreeTrace("output/primates_cytb_HKY.trees", treetype="non-clock", outgroup=out_group)
+# and then get the MAP tree
+map_tree = mapTree(treetrace,"output/primates_cytb_HKY_MAP.tree")

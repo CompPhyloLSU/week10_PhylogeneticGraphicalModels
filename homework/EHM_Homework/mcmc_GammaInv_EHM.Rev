@@ -1,0 +1,96 @@
+### Read in sequence data for both genes
+data <- readDiscreteCharacterData("data/primates_and_galeopterus_cytb.nex")
+
+
+num_taxa <- data.ntaxa()
+num_branches <- 2 * num_taxa - 3
+taxa <- data.taxa()
+
+moves    = VectorMoves()
+monitors = VectorMonitors()
+
+alpha ~ dnUniform(0,1E8)
+alpha.setValue(1)
+gamma_rates := fnDiscretizeGamma(alpha, alpha,4)
+moves.append(mvScale(alpha,weight=2.0))
+
+data.getNumInvariantSites()
+pinvar ~ dnBeta(1,1)
+moves.append( mvSlide(pinvar) )
+
+er_prior <- v(1,1,1,1,1,1)
+er ~ dnDirichlet(er_prior)
+
+moves.append(mvBetaSimplex(er, weight=3))
+moves.append(mvDirichletSimplex(er, weight=1))
+
+pi_prior <- v(1,1,1,1) 
+pi ~ dnDirichlet(pi_prior)
+
+moves.append(mvBetaSimplex(pi, weight=2))
+moves.append(mvDirichletSimplex(pi, weight=1))
+
+
+Q := fnGTR(er,pi)
+
+
+##############
+# Tree model #
+##############
+
+out_group = clade("Galeopterus_variegatus")
+# Prior distribution on the tree topology    
+topology ~ dnUniformTopology(taxa, outgroup=out_group)
+moves.append( mvNNI(topology, weight=num_taxa/2.0))
+moves.append( mvSPR(topology, weight=num_taxa/10.0))
+
+
+# Branch length prior
+for (i in 1:num_branches) {
+    br_lens[i] ~ dnExponential(10.0)
+    moves.append( mvScale(br_lens[i]) )
+}
+
+TL := sum(br_lens)
+    
+psi := treeAssembly(topology, br_lens)
+
+
+
+###################
+# PhyloCTMC Model #
+###################
+
+# the sequence evolution model
+seq ~ dnPhyloCTMC(tree=psi, Q=Q, siteRates=gamma_rates, pInv=pinvar, type="DNA")
+
+# attach the data
+seq.clamp(data)
+
+
+############
+# Analysis #
+############
+
+mymodel = model(psi)
+
+# add monitors
+monitors.append( mnScreen(TL, printgen=1000) )
+monitors.append( mnFile(psi, filename="output/primates_cytb_GammaInv.trees", printgen=10) )
+monitors.append( mnModel(filename="output/primates_cytb_GammaInv.log", printgen=10) )
+
+# run the analysis
+mymcmc = mcmc(mymodel, moves, monitors, nruns=2, combine="mixed")
+mymcmc.run(generations=10000,tuningInterval=200)
+
+
+###################
+# Post processing #
+###################
+
+
+treetrace = readTreeTrace("output/primates_cytb_GammaInv.trees", treetype="non-clock", outgroup=out_group)
+
+map_tree = mapTree(treetrace,"output/primates_cytb_GammaInv_MAP.tree")
+
+
